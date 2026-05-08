@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simples Nacional · Anexo III</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 font-sans">
+  <div class="min-h-screen p-6 flex items-start justify-center">
+    <div class="w-full max-w-md">
+      <h1 class="text-xl font-bold text-slate-900">Simples Nacional · Anexo III</h1>
+      <p class="text-xs text-slate-500 mb-5">Pró-labore 28% (Fator R) · Regras 2026</p>
+
+      <label class="block mb-5">
+        <span class="text-sm text-slate-700">Faturamento mensal (R$)</span>
+        <input id="fat" type="number" value="16000"
+          class="mt-1 w-full px-3 py-2 border border-slate-300 rounded text-lg font-medium focus:outline-none focus:ring-2 focus:ring-slate-400">
+      </label>
+
+      <div id="out" class="bg-white rounded border border-slate-200 divide-y divide-slate-100"></div>
+
+      <p class="text-xs text-slate-400 mt-4 leading-relaxed">
+        Isenção de IR para pró-labore até R$ 5.000 (Lei 15.270/2025) e redutor entre R$ 5.000,01 e R$ 7.350. INSS pessoa física em 11%.
+      </p>
+    </div>
+  </div>
+
+  <script>
+    const ANEXO_III = [
+      [180000, 0.06, 0], [360000, 0.112, 9360], [720000, 0.135, 17640],
+      [1800000, 0.16, 35640], [3600000, 0.21, 125640], [Infinity, 0.33, 648000]
+    ];
+    const IRRF = [
+      [2428.80, 0, 0], [2826.65, 0.075, 182.16], [3751.05, 0.15, 394.16],
+      [4664.68, 0.225, 675.49], [Infinity, 0.275, 908.73]
+    ];
+    const fmt = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const fat = document.getElementById('fat'), out = document.getElementById('out');
+
+    function calc() {
+      const f = +fat.value || 0;
+      const anual = f * 12, pl = f * 0.28;
+      const [, aN, dN] = ANEXO_III.find(([l]) => anual <= l);
+      const aliqEf = anual > 0 ? (anual * aN - dN) / anual : 0;
+      const das = f * aliqEf, inss = pl * 0.11, base = pl - inss;
+      let irrf = 0;
+      if (pl > 5000) {
+        const [, a, d] = IRRF.find(([l]) => base <= l);
+        irrf = Math.max(0, base * a - d);
+        if (pl <= 7350) irrf = Math.max(0, irrf - (978.62 - 0.133145 * pl));
+      }
+      const total = das + inss + irrf;
+      const row = (l, v, cls = '') =>
+        `<div class="flex justify-between px-4 py-2.5 text-sm ${cls}"><span>${l}</span><span class="font-medium tabular-nums">${fmt(v)}</span></div>`;
+      out.innerHTML =
+        row('Faturamento anual', anual) +
+        row('Pró-labore (28%)', pl) +
+        row(`DAS · alíq. ${(aliqEf * 100).toFixed(2)}%`, das) +
+        row('INSS pessoa física (11%)', inss) +
+        row('IRRF', irrf) +
+        row('Total de impostos', total, 'bg-red-50 text-red-900 font-semibold') +
+        row('Lucro líquido', f - total, 'bg-green-50 text-green-900 font-semibold');
+    }
+    fat.addEventListener('input', calc);
+    calc();
+  </script>
+</body>
+</html>
