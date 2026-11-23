@@ -20,6 +20,14 @@
 
       <div id="out" class="bg-white rounded border border-slate-200 divide-y divide-slate-100"></div>
 
+      <div class="mt-4 rounded border border-amber-200 bg-amber-50">
+        <p class="px-4 pt-3 text-xs font-semibold text-amber-900">NFS-e 2026 · Reforma Tributária (ano-teste)</p>
+        <div id="ref" class="divide-y divide-amber-100"></div>
+        <p class="px-4 pb-3 pt-2 text-xs text-amber-800 leading-relaxed">
+          Em 2026 IBS (0,1%) e CBS (0,9%) são só <b>destaque informativo</b> na nota. Optante do Simples segue pagando apenas o DAS, então <b>não há aumento de imposto</b> e o valor líquido da nota não muda. Esses valores não entram no total acima.
+        </p>
+      </div>
+
       <p class="text-xs text-slate-400 mt-4 leading-relaxed">
         Isenção de IR para pró-labore até R$ 5.000 (Lei 15.270/2025) e redutor entre R$ 5.000,01 e R$ 7.350. INSS pessoa física em 11%.
       </p>
@@ -36,6 +44,8 @@
       [4664.68, 0.225, 675.49], [Infinity, 0.275, 908.73]
     ];
     const fmt = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const IBS = 0.001, CBS = 0.009; // alíquotas-teste 2026 (NFS-e)
+    const ref = document.getElementById('ref');
     const fat = document.getElementById('fat'), out = document.getElementById('out');
 
     function calc() {
@@ -61,6 +71,13 @@
         row('IRRF', irrf) +
         row('Total de impostos', total, 'bg-red-50 text-red-900 font-semibold') +
         row('Lucro líquido', f - total, 'bg-green-50 text-green-900 font-semibold');
+      const r = (l, v) =>
+        `<div class="flex justify-between px-4 py-2 text-sm text-amber-900"><span>${l}</span><span class="font-medium tabular-nums">${fmt(v)}</span></div>`;
+      ref.innerHTML =
+        r('IBS destacado (0,10%)', f * IBS) +
+        r('CBS destacada (0,90%)', f * CBS) +
+        r('Total IBS/CBS (informativo, não cobrado)', f * (IBS + CBS)) +
+        r('Valor líquido da NFS-e (inalterado)', f);
     }
     fat.addEventListener('input', calc);
     calc();
