@@ -31,6 +31,20 @@
       <p class="text-xs text-slate-400 mt-4 leading-relaxed">
         Isenção de IR para pró-labore até R$ 5.000 (Lei 15.270/2025) e redutor entre R$ 5.000,01 e R$ 7.350. INSS pessoa física em 11%.
       </p>
+
+      <div class="mt-4 rounded border border-sky-200 bg-sky-50">
+        <p class="px-4 pt-3 text-xs font-semibold text-sky-900">Simulação 2027 · Simples × regime regular de IBS/CBS</p>
+        <div class="grid grid-cols-2 gap-3 px-4 pt-3">
+          <label class="text-xs text-sky-900">CBS de referência (%)
+            <input id="cbs" type="number" step="0.1" value="8.8" class="mt-1 w-full px-2 py-1 border border-sky-200 rounded text-sm bg-white"></label>
+          <label class="text-xs text-sky-900">Compras com crédito/mês (R$)
+            <input id="cred" type="number" value="0" class="mt-1 w-full px-2 py-1 border border-sky-200 rounded text-sm bg-white"></label>
+        </div>
+        <div id="sim" class="mt-2 divide-y divide-sky-100"></div>
+        <p class="px-4 pb-3 pt-2 text-xs text-sky-800 leading-relaxed">
+          Estimativa. Alíquota de referência da CBS ainda é projeção (editável). No regime regular, o DAS perde só a parcela de PIS/Cofins (ISS segue no DAS até 2032) e a CBS é calculada sobre faturamento menos compras com crédito. IBS fica em 0,1% (teste) em 2027. Não considera reduções de alíquota por tipo de serviço. Valide com seu contador.
+        </p>
+      </div>
     </div>
   </div>
 
@@ -44,6 +58,10 @@
       [4664.68, 0.225, 675.49], [Infinity, 0.275, 908.73]
     ];
     const fmt = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    // Repartição do Anexo III por faixa: parcela de PIS + Cofins no DAS
+    const PISCOFINS = [0.1560, 0.1710, 0.1660, 0.1660, 0.1950, 0.1950];
+    const sim = document.getElementById('sim');
+    const cbsIn = document.getElementById('cbs'), credIn = document.getElementById('cred');
     const IBS = 0.001, CBS = 0.009; // alíquotas-teste 2026 (NFS-e)
     const ref = document.getElementById('ref');
     const fat = document.getElementById('fat'), out = document.getElementById('out');
@@ -51,7 +69,8 @@
     function calc() {
       const f = +fat.value || 0;
       const anual = f * 12, pl = f * 0.28;
-      const [, aN, dN] = ANEXO_III.find(([l]) => anual <= l);
+      const fx = ANEXO_III.findIndex(([l]) => anual <= l);
+      const [, aN, dN] = ANEXO_III[fx];
       const aliqEf = anual > 0 ? (anual * aN - dN) / anual : 0;
       const das = f * aliqEf, inss = pl * 0.11, base = pl - inss;
       let irrf = 0;
@@ -78,8 +97,29 @@
         r('CBS destacada (0,90%)', f * CBS) +
         r('Total IBS/CBS (informativo, não cobrado)', f * (IBS + CBS)) +
         r('Valor líquido da NFS-e (inalterado)', f);
+
+      // Simulação 2027
+      const cbsAliq = (+cbsIn.value || 0) / 100, cred = Math.min(+credIn.value || 0, f);
+      const pc = das * PISCOFINS[fx];
+      const cbsDevida = Math.max(0, (f - cred) * cbsAliq);
+      const regular = das - pc + cbsDevida + f * IBS;
+      const delta = regular - das;
+      const q = (l, v, cls = '') =>
+        `<div class="flex justify-between px-4 py-2 text-sm text-sky-900 ${cls}"><span>${l}</span><span class="font-medium tabular-nums">${fmt(v)}</span></div>`;
+      sim.innerHTML =
+        q('A) Simples completo: DAS', das) +
+        q('B) Regular: DAS sem PIS/Cofins', das - pc) +
+        q('B) + CBS líquida de créditos', cbsDevida) +
+        q('B) + IBS teste (0,1%)', f * IBS) +
+        q('B) Total mensal', regular, 'font-semibold') +
+        q(delta > 0 ? 'Regular custa a mais por mês' : 'Regular economiza por mês', Math.abs(delta),
+          delta > 0 ? 'bg-red-50 text-red-900 font-semibold' : 'bg-green-50 text-green-900 font-semibold') +
+        q('Crédito de CBS que o cliente aproveita · A', pc) +
+        q('Crédito de CBS que o cliente aproveita · B', f * cbsAliq);
     }
     fat.addEventListener('input', calc);
+    cbsIn.addEventListener('input', calc);
+    credIn.addEventListener('input', calc);
     calc();
   </script>
 </body>
