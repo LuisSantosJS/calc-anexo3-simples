@@ -39,10 +39,12 @@
             <input id="cbs" type="number" step="0.1" value="8.8" class="mt-1 w-full px-2 py-1 border border-sky-200 rounded text-sm bg-white"></label>
           <label class="text-xs text-sky-900">Compras com crédito/mês (R$)
             <input id="cred" type="number" value="0" class="mt-1 w-full px-2 py-1 border border-sky-200 rounded text-sm bg-white"></label>
+          <label class="text-xs text-sky-900 col-span-2">Alíquota efetiva de CBS no DAS (%, tabela do PGDAS)
+            <input id="cbsdas" type="number" step="0.01" placeholder="vazio = estimativa" class="mt-1 w-full px-2 py-1 border border-sky-200 rounded text-sm bg-white"></label>
         </div>
         <div id="sim" class="mt-2 divide-y divide-sky-100"></div>
         <p class="px-4 pb-3 pt-2 text-xs text-sky-800 leading-relaxed">
-          Estimativa. Alíquota de referência da CBS ainda é projeção (editável). No regime regular, o DAS perde só a parcela de PIS/Cofins (ISS segue no DAS até 2032) e a CBS é calculada sobre faturamento menos compras com crédito. IBS fica em 0,1% (teste) em 2027. Não considera reduções de alíquota por tipo de serviço. Valide com seu contador.
+          Estimativa. Alíquota de referência da CBS ainda é projeção (editável). No regime regular, o DAS perde só a parcela de CBS (que substitui PIS/Cofins; ISS segue no DAS até 2032). Se você não informar a alíquota efetiva de CBS do PGDAS, uso uma estimativa da repartição do Anexo III que <b>não foi validada</b> e a CBS é calculada sobre faturamento menos compras com crédito. IBS fica em 0,1% (teste) em 2027. Não considera reduções de alíquota por tipo de serviço. Valide com seu contador.
         </p>
       </div>
     </div>
@@ -61,6 +63,7 @@
     // Repartição do Anexo III por faixa: parcela de PIS + Cofins no DAS
     const PISCOFINS = [0.1560, 0.1710, 0.1660, 0.1660, 0.1950, 0.1950];
     const sim = document.getElementById('sim');
+    const cbsDasIn = document.getElementById('cbsdas');
     const cbsIn = document.getElementById('cbs'), credIn = document.getElementById('cred');
     const IBS = 0.001, CBS = 0.009; // alíquotas-teste 2026 (NFS-e)
     const ref = document.getElementById('ref');
@@ -100,7 +103,10 @@
 
       // Simulação 2027
       const cbsAliq = (+cbsIn.value || 0) / 100, cred = Math.min(+credIn.value || 0, f);
-      const pc = das * PISCOFINS[fx];
+      const estim = das * PISCOFINS[fx];
+      cbsDasIn.placeholder = `estimativa: ${(f > 0 ? estim / f * 100 : 0).toFixed(2)}%`;
+      const informada = cbsDasIn.value !== '';
+      const pc = informada ? Math.min(das, f * (+cbsDasIn.value || 0) / 100) : estim;
       const cbsDevida = Math.max(0, (f - cred) * cbsAliq);
       const regular = das - pc + cbsDevida + f * IBS;
       const delta = regular - das;
@@ -108,7 +114,7 @@
         `<div class="flex justify-between px-4 py-2 text-sm text-sky-900 ${cls}"><span>${l}</span><span class="font-medium tabular-nums">${fmt(v)}</span></div>`;
       sim.innerHTML =
         q('A) Simples completo: DAS', das) +
-        q('B) Regular: DAS sem PIS/Cofins', das - pc) +
+        q(`B) Regular: DAS sem a CBS embutida${informada ? '' : ' (estimativa)'}`, das - pc) +
         q('B) + CBS líquida de créditos', cbsDevida) +
         q('B) + IBS teste (0,1%)', f * IBS) +
         q('B) Total mensal', regular, 'font-semibold') +
@@ -120,6 +126,7 @@
     fat.addEventListener('input', calc);
     cbsIn.addEventListener('input', calc);
     credIn.addEventListener('input', calc);
+    cbsDasIn.addEventListener('input', calc);
     calc();
   </script>
 </body>
